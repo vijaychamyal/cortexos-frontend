@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useState, useEffect, useRef } from "react"
 import { Brain, Settings2, Sparkles, UserCircle } from "lucide-react"
 import axios from "axios"
 import { UploadPanel } from "@/components/upload-panel"
@@ -16,27 +16,43 @@ import {
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
+const API = process.env.NEXT_PUBLIC_API_URL
+
 let idCounter = 0
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${idCounter++}`
+
+// Ping the backend every 10 minutes to prevent Render free-tier spin-down
+function useKeepAlive() {
+  useEffect(() => {
+    if (!API) return
+    const ping = () => axios.get(`${API}/`).catch(() => {})
+    ping() // ping immediately on page load to pre-warm
+    const interval = setInterval(ping, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+}
 
 export function DocumentWorkspace() {
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  
-  // 1. STATE: Track the user's active session
   const [session, setSession] = useState<{ id: string; type: "guest" | "user" }>({ id: "", type: "guest" })
 
-  // 2. EFFECT: Generate or load the UUID as soon as the page opens
+  useKeepAlive()
+
   useEffect(() => {
     const activeSession = getOrCreateWorkspaceSession()
     setSession(activeSession)
   }, [])
 
-  // 3. UPLOAD LOGIC
   const handleUpload = useCallback(
     (incoming: File[]) => {
-      if (!session.id) return; // Wait until session loads
+      if (!session.id) return
+
+      if (!API) {
+        alert("API URL is not configured. Please check environment variables.")
+        return
+      }
 
       incoming.forEach(async (file) => {
         const newFile: UploadedFile = {
@@ -54,24 +70,32 @@ export function DocumentWorkspace() {
 
         const formData = new FormData()
         formData.append("file", file)
-        formData.append("user_id", session.id) // <-- Appends the dynamic user UUID to the FastAPI request
+        formData.append("user_id", session.id)
 
         try {
-          await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/upload`, formData, {
+          await axios.post(`${API}/upload`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
+            timeout: 120_000, // 2 min — gives Render time to wake up + process
           })
-          
+
           setFiles((prev) =>
             prev.map((f) => (f.id === newFile.id ? { ...f, status: "ready" } : f))
           )
-        } catch (error) {
-          console.error("Failed to upload file:", error)
+        } catch (error: any) {
+          console.error("Upload error:", error)
           setFiles((prev) => prev.filter((f) => f.id !== newFile.id))
-          alert(`Failed to upload ${file.name}. Is the FastAPI server running?`)
+
+          if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+            alert(`Upload timed out — the server may be waking up. Please try again in 30 seconds.`)
+          } else if (error.response) {
+            alert(`Upload failed: ${error.response.data?.detail || error.response.statusText}`)
+          } else {
+            alert(`Upload failed: could not reach the server at ${API}. Check your connection.`)
+          }
         }
       })
     },
-    [session.id] // React watches the session
+    [session.id]
   )
 
   const handleRemove = useCallback((id: string) => {
@@ -79,11 +103,10 @@ export function DocumentWorkspace() {
     setSelectedId((cur) => (cur === id ? null : cur))
   }, [])
 
-  // 4. CONTEXT-AWARE CHAT LOGIC
   const handleSend = useCallback(
     async (content: string) => {
-      if (!session.id) return;
-      
+      if (!session.id || !API) return
+
       const activeFile = files.find((f) => f.id === selectedId)
 
       const userMsg: ChatMessage = {
@@ -93,53 +116,37 @@ export function DocumentWorkspace() {
         createdAt: Date.now(),
       }
       const pendingId = uid("msg")
-      
+
       setMessages((prev) => [
         ...prev,
         userMsg,
-        {
-          id: pendingId,
-          role: "assistant",
-          content: "",
-          createdAt: Date.now(),
-          pending: true,
-        },
+        { id: pendingId, role: "assistant", content: "", createdAt: Date.now(), pending: true },
       ])
 
       try {
-        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+        const response = await axios.post(`${API}/chat`, {
           question: content,
           filename: activeFile ? activeFile.name : null,
-          user_id: session.id // <-- Sends the dynamic UUID so Qdrant isolates the search
-        })
+          user_id: session.id,
+        }, { timeout: 60_000 })
 
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === pendingId
-              ? {
-                  ...m,
-                  pending: false,
-                  content: response.data.answer,
-                }
-              : m
+            m.id === pendingId ? { ...m, pending: false, content: response.data.answer } : m
           )
         )
-      } catch (error) {
-        console.error("Chat Error:", error)
+      } catch (error: any) {
+        console.error("Chat error:", error)
+        const errMsg = error.response?.data?.detail
+          || (error.code === "ECONNABORTED" ? "Request timed out — please try again." : "Error connecting to CortexOS AI Engine.")
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === pendingId
-              ? {
-                  ...m,
-                  pending: false,
-                  content: "⚠️ Error connecting to CortexOS AI Engine. Please check the backend.",
-                }
-              : m
+            m.id === pendingId ? { ...m, pending: false, content: `⚠️ ${errMsg}` } : m
           )
         )
       }
     },
-    [files, selectedId, session.id] // React watches the session
+    [files, selectedId, session.id]
   )
 
   return (
@@ -164,16 +171,12 @@ export function DocumentWorkspace() {
                 Intelligence
               </span>
             </p>
-            <p className="text-xs text-muted-foreground">
-              Document understanding workspace
-            </p>
+            <p className="text-xs text-muted-foreground">Document understanding workspace</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          
-          {/* SMART AUTH BUTTON */}
-          {session.type === 'guest' ? (
-            <Link 
+          {session.type === "guest" ? (
+            <Link
               href="/login"
               className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 sm:flex"
             >
@@ -181,10 +184,10 @@ export function DocumentWorkspace() {
               Sign in to Save
             </Link>
           ) : (
-            <button 
+            <button
               onClick={async () => {
                 await supabase.auth.signOut()
-                window.location.reload() // Reload to reset back to guest mode
+                window.location.reload()
               }}
               className="flex items-center gap-1.5 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:flex"
             >
@@ -207,22 +210,11 @@ export function DocumentWorkspace() {
         <div className="hidden border-r border-border lg:block">
           <UploadPanel onFiles={handleUpload} />
         </div>
-
         <main className="min-w-0 border-border">
-          <ChatPanel
-            messages={messages}
-            fileCount={files.length}
-            onSend={handleSend}
-          />
+          <ChatPanel messages={messages} fileCount={files.length} onSend={handleSend} />
         </main>
-
         <div className="hidden border-l border-border lg:block">
-          <FilesPanel
-            files={files}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onRemove={handleRemove}
-          />
+          <FilesPanel files={files} selectedId={selectedId} onSelect={setSelectedId} onRemove={handleRemove} />
         </div>
       </div>
     </div>
