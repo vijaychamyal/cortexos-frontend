@@ -27,6 +27,7 @@ const features: Feature[] = [
     title: "Stock Intelligence",
     description:
       "Forecast trends, analyze market sentiment and explore financial insights.",
+    href: "/stocks",
   },
   {
     icon: Wand2,

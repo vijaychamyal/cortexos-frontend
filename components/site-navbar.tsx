@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 const navLinks = [
   { label: "Features", href: "#features" },
-  { label: "Product", href: "#product" },
+  { label: "Documents", href: "/documents" },
+  { label: "Stocks", href: "/stocks" },
   { label: "How it works", href: "#how-it-works" },
-  { label: "Dashboard", href: "/dashboard" },
 ]
 
 export function SiteNavbar() {
