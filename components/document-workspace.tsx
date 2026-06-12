@@ -54,7 +54,18 @@ export function DocumentWorkspace() {
         return
       }
 
+      // Keep in sync with backend MAX_UPLOAD_MB (default 25 MB).
+      const MAX_UPLOAD_MB = 25
+
       incoming.forEach(async (file) => {
+        if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+          alert(
+            `"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. ` +
+            `Max allowed is ${MAX_UPLOAD_MB} MB.`
+          )
+          return
+        }
+
         const newFile: UploadedFile = {
           id: uid("file"),
           name: file.name,
