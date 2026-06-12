@@ -158,7 +158,7 @@ export function StockWorkspace() {
   }, [prediction])
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-40 left-1/4 size-[28rem] rounded-full bg-primary/10 blur-[120px]" />
         <div className="absolute -bottom-40 right-1/4 size-[26rem] rounded-full bg-[oklch(0.6_0.13_270)]/10 blur-[120px]" />
@@ -192,9 +192,9 @@ export function StockWorkspace() {
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-5 p-4 lg:grid-cols-5">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-5 overflow-y-auto p-4 lg:grid-cols-5 lg:overflow-hidden">
         {/* Prediction panel */}
-        <section className="lg:col-span-3">
+        <section className="min-w-0 lg:col-span-3 lg:overflow-y-auto">
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center gap-2">
               <TrendingUp className="size-5 text-primary" />
@@ -279,8 +279,8 @@ export function StockWorkspace() {
         </section>
 
         {/* Chatbot panel */}
-        <section className="lg:col-span-2">
-          <div className="glass flex h-full min-h-[28rem] flex-col rounded-2xl p-5">
+        <section className="flex min-h-[28rem] min-w-0 flex-col lg:col-span-2 lg:h-full lg:min-h-0">
+          <div className="glass flex h-full min-h-0 flex-1 flex-col rounded-2xl p-5">
             <div className="flex items-center gap-2">
               <Sparkles className="size-5 text-primary" />
               <h2 className="text-base font-semibold">Analytical Chatbot</h2>
@@ -289,7 +289,7 @@ export function StockWorkspace() {
               Ask why a stock moved — answers cite live price action & news.
             </p>
 
-            <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+            <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
               {messages.map((m, i) => (
                 <div
                   key={i}
