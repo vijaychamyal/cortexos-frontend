@@ -171,7 +171,11 @@ export function DocumentWorkspace() {
       </div>
 
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2.5">
+        <Link
+          href="/"
+          aria-label="Go to CortexOS home"
+          className="flex items-center gap-2.5 rounded-xl outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
             <Brain className="size-5" aria-hidden="true" />
           </span>
@@ -184,7 +188,7 @@ export function DocumentWorkspace() {
             </p>
             <p className="text-xs text-muted-foreground">Document understanding workspace</p>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
           {session.type === "guest" ? (
             <Link

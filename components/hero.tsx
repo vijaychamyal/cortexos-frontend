@@ -1,5 +1,7 @@
 import { ArrowRight, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export function Hero() {
   return (
@@ -32,20 +34,16 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex w-full flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button
-            size="lg"
-            className="gradient-accent w-full font-medium text-primary-foreground hover:opacity-90 sm:w-auto"
+          <Link
+            href="/documents"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "gradient-accent w-full font-medium text-primary-foreground hover:opacity-90 sm:w-auto",
+            )}
           >
             Get Started Free
             <ArrowRight className="size-4" aria-hidden="true" />
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="glass w-full border-0 hover:bg-secondary sm:w-auto"
-          >
-            Book a Demo
-          </Button>
+          </Link>
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">

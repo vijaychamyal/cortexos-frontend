@@ -1,11 +1,20 @@
 import { FileText, LineChart, Wand2, Search } from "lucide-react"
+import Link from "next/link"
 
-const features = [
+type Feature = {
+  icon: typeof FileText
+  title: string
+  description: string
+  href?: string
+}
+
+const features: Feature[] = [
   {
     icon: FileText,
     title: "Chat with Documents",
     description:
       "Upload PDFs, PPTs, DOCX files, spreadsheets and images. Ask questions and get instant answers.",
+    href: "/documents",
   },
   {
     icon: Search,
@@ -42,25 +51,45 @@ export function Features() {
         </div>
 
         <div className="mt-14 grid gap-5 sm:grid-cols-2">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className="glass group rounded-2xl p-6 transition-colors hover:border-primary/40 md:p-8"
-            >
-              <span className="gradient-accent mb-5 inline-flex size-12 items-center justify-center rounded-xl">
-                <feature.icon
-                  className="size-6 text-primary-foreground"
-                  aria-hidden="true"
-                />
-              </span>
-              <h3 className="text-xl font-semibold tracking-tight">
-                {feature.title}
-              </h3>
-              <p className="mt-2 leading-relaxed text-muted-foreground">
-                {feature.description}
-              </p>
-            </article>
-          ))}
+          {features.map((feature) => {
+            const inner = (
+              <>
+                <span className="gradient-accent mb-5 inline-flex size-12 items-center justify-center rounded-xl">
+                  <feature.icon
+                    className="size-6 text-primary-foreground"
+                    aria-hidden="true"
+                  />
+                </span>
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
+              </>
+            )
+
+            if (feature.href) {
+              return (
+                <Link
+                  key={feature.title}
+                  href={feature.href}
+                  className="glass group block rounded-2xl p-6 outline-none transition-colors hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/50 md:p-8"
+                >
+                  {inner}
+                </Link>
+              )
+            }
+
+            return (
+              <article
+                key={feature.title}
+                className="glass group rounded-2xl p-6 transition-colors hover:border-primary/40 md:p-8"
+              >
+                {inner}
+              </article>
+            )
+          })}
         </div>
       </div>
     </section>
